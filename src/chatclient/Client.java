@@ -2,6 +2,7 @@ package chatclient;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class Client {
     private static final int PACKET_SIZE = 1024;
@@ -12,6 +13,7 @@ public class Client {
 
     public void connect(String serverIP, int serverPort) throws IOException {
         socket = new Socket(serverIP, serverPort);
+        socket.setSoTimeout(5000);  // Set a timeout of 5 seconds
         System.out.println("Connected to the server.");
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -58,7 +60,10 @@ public class Client {
     public void listenForMessages() throws IOException {
         String message;
         while ((message = reader.readLine()) != null) {
-            if (message.equals("SUCCESS")) {
+            if (message.startsWith("File received: ")) {
+                String filePath = message.substring("File received: ".length()).trim();
+                receiveFile(filePath);
+            } else if (message.equals("FILE_TRANSFER_COMPLETE")) {
                 System.out.println("File transfer completed.");
             } else if (message.equals("ERROR_FILE_NOT_FOUND")) {
                 System.out.println("File not found.");
@@ -67,7 +72,6 @@ public class Client {
             }
         }
     }
-
     public boolean receiveFile(String filePath) throws IOException {
         File file = new File(filePath);
         FileOutputStream fos = new FileOutputStream(file);
@@ -110,8 +114,13 @@ public class Client {
     }
     
     private boolean receiveConfirmation() throws IOException {
-        String confirmation = reader.readLine();
-        return confirmation != null && confirmation.equals("SUCCESS");
+        try {
+            String confirmation = reader.readLine();
+            return confirmation != null && confirmation.equals("FILE_TRANSFER_COMPLETE");
+        } catch (SocketTimeoutException e) {
+            System.out.println("Timeout while waiting for confirmation.");
+            return false;
+        }
     }
 
     
