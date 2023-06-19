@@ -1,12 +1,11 @@
+
 package chatclient;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
+
 
 public class Client {
-    private static final int PACKET_SIZE = 1024;
-    private static final int MAX_RETRY_COUNT = 3;
     private Socket socket;
     private BufferedWriter writer;
     private BufferedReader reader;
@@ -60,69 +59,45 @@ public class Client {
     public void listenForMessages() throws IOException {
         String message;
         while ((message = reader.readLine()) != null) {
-            if (message.startsWith("File received: ")) {
-                String filePath = message.substring("File received: ".length()).trim();
-                receiveFile(filePath);
-            } else if (message.equals("FILE_TRANSFER_COMPLETE")) {
-                System.out.println("File transfer completed.");
+            if (message.startsWith("FILE_AVAILABLE")) {
+                String[] parts = message.split(" ");
+                String fileName = parts[1];
+                long fileSize = Long.parseLong(parts[2]);
+                receiveFile(fileName, fileSize);
+                System.out.println("File received.");
             } else if (message.equals("ERROR_FILE_NOT_FOUND")) {
                 System.out.println("File not found.");
             } else if (message.equals("ERROR_FILE_TRANSFER")) {
                 System.out.println("File transfer error.");
+            } else {
+                System.out.println("Received message: " + message);
             }
         }
     }
-    public boolean receiveFile(String filePath) throws IOException {
-        File file = new File(filePath);
+
+ 
+    public void receiveFile(String fileName, long fileSize) throws IOException {
+        File file = new File(fileName);
         FileOutputStream fos = new FileOutputStream(file);
-        BufferedInputStream bis = new BufferedInputStream(socket.getInputStream());
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
 
-        byte[] buffer = new byte[PACKET_SIZE];
+        byte[] buffer = new byte[1024];
         int bytesRead;
-        int retryCount = 0;
-
-        while ((bytesRead = bis.read(buffer)) != -1) {
-            fos.write(buffer, 0, bytesRead);
-            fos.flush();
-
-            if (!receiveConfirmation()) {
-                retryCount++;
-                if (retryCount > MAX_RETRY_COUNT) {
-                    System.out.println("Exceeded the maximum retry count. File transfer failed.");
-                    fos.close();
-                    bis.close();
-                    file.delete();
-                    return false;
-                }
-                System.out.println("Failed to receive confirmation. Retrying...");
-                continue;
-            }
-
-            retryCount = 0;
+        long totalBytesRead = 0;
+        InputStream is = socket.getInputStream();
+        while (totalBytesRead < fileSize && (bytesRead = is.read(buffer)) != -1) {
+            bos.write(buffer, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            bos.flush();
         }
 
+        bos.close();
         fos.close();
-        bis.close();
 
-        if (retryCount == 0) {
-            System.out.println("File received and saved");
-            return true;
-        } else {
-            file.delete();
-            return false;
-        }
+        sendMessage("File received: " + file.getName());
     }
+
     
-    private boolean receiveConfirmation() throws IOException {
-        try {
-            String confirmation = reader.readLine();
-            return confirmation != null && confirmation.equals("FILE_TRANSFER_COMPLETE");
-        } catch (SocketTimeoutException e) {
-            System.out.println("Timeout while waiting for confirmation.");
-            return false;
-        }
-    }
-
     
     public void sendMessage(String message) throws IOException {
         writer.write(message);
@@ -135,12 +110,14 @@ public class Client {
     }
 
 
+ 
     public static void main(String[] args) throws IOException {
         // Create and start client
         Client client = new Client();
-        client.connect("localhost", 7777);
+        client.connect("localhost", 6666);
 
         // Send file
         client.sendFile("/path/to/file.txt");
     }
+
 }
