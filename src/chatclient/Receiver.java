@@ -1,3 +1,4 @@
+
 package chatclient;
 
 import java.io.*;
@@ -32,7 +33,10 @@ public class Receiver {
     }
 
     public void receiveFile(String fileName, long fileSize) throws IOException {
-        File file = new File(fileName);
+        // Add a unique time stamp prefix to the file name
+        String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
+
+        File file = new File(uniqueFileName);
         FileOutputStream fos = new FileOutputStream(file);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
@@ -51,4 +55,15 @@ public class Receiver {
 
         System.out.println("File received: " + file.getName());
     }
+    public static void main(String[] args) {
+        try {
+            Socket socket = new Socket("localhost", 1113);
+            Receiver receiver = new Receiver(socket);
+            receiver.listenForMessages(); 
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }
