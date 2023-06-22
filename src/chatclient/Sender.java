@@ -23,7 +23,7 @@ public class Sender {
         }
 
         // Send file transfer request
-        String fileInfo = "FILE_TRANSFER_REQUEST " + file.getName() + " " + file.length() + "END_OF_CHUNK";
+        String fileInfo = "FILE_TRANSFER_REQUEST " + file.getName() + " " + file.length() + "\n"; 
         outputStream.write(fileInfo.getBytes());
         // Send file
         FileInputStream fis = new FileInputStream(file);
@@ -31,7 +31,7 @@ public class Sender {
         int length;
         while ((length = fis.read(buffer)) > 0) {
             // Convert the file chunk to a Base64 string and send
-            String data = Base64.getEncoder().encodeToString(Arrays.copyOf(buffer, length)) + "END_OF_CHUNK";
+            String data = Base64.getEncoder().encodeToString(Arrays.copyOf(buffer, length)) + "\n"; 
             outputStream.write(data.getBytes());
         }
 
@@ -50,16 +50,16 @@ public class Sender {
     }
 
     public void sendMessage(String message) throws IOException {
-        String completeMessage = message + "END_OF_CHUNK";
+        String completeMessage = message + "\n"; 
         outputStream.write(completeMessage.getBytes());
         outputStream.flush();
     }
     
     public static void main(String[] args) {
         try {
-            Socket socket = new Socket("localhost", 6665);
+            Socket socket = new Socket("localhost", 6667);
             Sender sender = new Sender(socket);
-            sender.sendFile("C:\\JavaProjects\\chatclient\\src\\chatclient\\test.txt"); 
+            sender.sendFile("C:\\JavaProjects\\chatclient\\src\\chatclient\\test.zip"); 
             try {
                 Thread.sleep(5000);  // Wait for a while before closing the connection.
             } catch (InterruptedException e) {
