@@ -74,7 +74,7 @@ public class Sender {
         try {
             Sender sender = new Sender("localhost", 1234);
             sender.openConnection();
-            sender.sendMessage("Hello, world!");
+            sender.sendMessage("Hello!");
             sender.sendFile("C:\\JavaProjects\\chatclient\\src\\chatclient\\test.zip");
             sender.closeConnection();
             sender.close();
